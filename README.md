@@ -13,6 +13,20 @@ what isnt really mentioned explicitly but implied on that page is, that 1 CPU is
 
 the simulator is a "complete" implementation of the private server in your browser, which means it runs very inconsistently so you cannot really use it to check CPU improvements.
 
+## can i save things between ticks? / how do i cache things?
+
+the easiest way to store things between ticks is using Memory. anything you put in Memory gets serialized (via JSON.stringify) at the end of your tick, and deserialized (via JSON.parse) as soon as you use Memory for the first time in a tick. due to the way JSON.parse works, information about types will get lost, and you will only get a primitive object from Memory (for example: saving a RoomPosition object results in a {x: number, y: number, roomName: string} object the next tick).
+
+you pay with your CPU for both serialization and deserialization.
+
+since the introduction of isolated VM you can now also safely use the global object (https://nodejs.org/api/globals.html#globals_global) for caching purposes (referred to as heap too). if you save data in global, you need to be careful about game objects. for example saving a Creep object will result in the Creep object not being updated for the next tick automatically ( = "it becomes stale"), and as such using that same object might result in weird interactions. it is your responsibility to keep things in the heap up to date. 
+
+your global object resets sometimes. this happens randomly every couple thousand of ticks (sometimes you get lucky and even get 50k or more ticks), when you upload code or when you call Game.cpu.halt(). it is often referred to as "global reset".
+
+this is a very cheap method of caching, since you just pay in heap size (if the heap gets big, garbage collection might kick in). so a lot of people cache most of the date here that can be recalculated easily (ranges, paths, ...). 
+
+another use case: you can also use segments as safety option for long term intel or similar data and load all your segments into the heap on global reset, this way freeing up your segment requests and deserialization costs.
+
 
 ## whats the strange _ thing? / what is lodash?
 
